@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "Heisenberg OS Project Profile Specification",
+  "version": "2.0.0",
+  "description": "The complete, 20-dimension architectural passport that governs any repository under Heisenberg OS.",
+  
+  "project_meta": {
+    "project_name": "My SaaS Platform",
+    "project_slug": "my-saas-platform",
+    "tagline": "Real-time collaborative workspace for distributed engineering teams.",
+    "lead_architect": "Engineering Lead <lead@example.com>",
+    "repository_url": "https://github.com/my-org/my-saas-platform"
+  },
+
+  "1_runtimes_and_tooling": {
+    "node_version": ">=20.11.0",
+    "python_version": ">=3.11.0",
+    "package_manager": "pnpm@9.1.0",
+    "lockfile": "pnpm-lock.yaml",
+    "enforce_strict_engines": true,
+    "banned_package_managers": ["npm", "yarn"]
+  },
+
+  "2_architecture_and_topology": {
+    "pattern": "Clean Architecture / Hexagonal Ports-and-Adapters",
+    "core_domain_isolation": "Core business logic must have ZERO external SDK dependencies.",
+    "directory_map": {
+      "frontend_root": "apps/web",
+      "backend_root": "apps/api",
+      "shared_contracts": "packages/contracts",
+      "design_tokens": "design-system/tokens.json",
+      "database_migrations": "packages/database/migrations",
+      "docs_and_adr": "docs/adr"
+    }
+  },
+
+  "3_database_and_migrations": {
+    "engine": "PostgreSQL 16",
+    "orm_or_query_builder": "Prisma ORM",
+    "migration_tool": "prisma migrate",
+    "migration_command": "pnpm --filter @repo/database db:migrate:dev",
+    "prohibit_raw_ddl_scripts": true,
+    "require_down_migrations": true
+  },
+
+  "4_auth_and_session_strategy": {
+    "auth_flow": "OAuth 2.0 Authorization Code Flow with PKCE",
+    "session_transport": "HttpOnly Secure SameSite=Lax Cookie",
+    "jwt_storage_rules": "STRICTLY FORBIDDEN in localStorage or sessionStorage (XSS protection).",
+    "header_format": "Authorization: Bearer <token>",
+    "token_rotation_enabled": true
+  },
+
+  "5_api_contracts_and_envelopes": {
+    "standard_response_envelope": {
+      "success": "boolean",
+      "data": "T | null",
+      "error": {
+        "code": "STRING_ENUM_UPPERCASE",
+        "message": "Human-readable error description",
+        "details": "array | object | null"
+      },
+      "meta": {
+        "timestamp": "ISO_8601_UTC",
+        "request_id": "uuid_v4"
+      }
+    },
+    "validation_engine": "Zod (TypeScript) / Pydantic (Python)",
+    "enforce_strict_input_validation": true
+  },
+
+  "6_third_party_quotas_and_limits": {
+    "external_apis": [
+      {
+        "service": "Google Drive API",
+        "max_export_size_mb": 10,
+        "max_queries_per_second": 50,
+        "circuit_breaker_timeout_ms": 5000
+      },
+      {
+        "service": "OpenRouter / LLM Inference",
+        "primary_model": "anthropic/claude-3.5-sonnet",
+        "rate_limit_rpm": 60,
+        "max_tokens_per_request": 4096
+      },
+      {
+        "service": "Stripe Payments",
+        "rate_limit_rps": 100,
+        "webhook_signature_header": "stripe-signature"
+      }
+    ]
+  },
+
+  "7_security_and_pii_blacklist": {
+    "forbidden_in_logs_and_index": [
+      "password",
+      "password_hash",
+      "token",
+      "refresh_token",
+      "secret",
+      "ssn",
+      "credit_card",
+      "code_verifier"
+    ],
+    "sql_parameterization_mandatory": true,
+    "html_sanitization_engine": "DOMPurify / bleach"
+  },
+
+  "8_environment_variables_inventory": {
+    "example_file_path": ".env.example",
+    "required_server_vars": [
+      "DATABASE_URL",
+      "JWT_SECRET",
+      "REDIS_URL"
+    ],
+    "allowed_public_client_vars": [
+      "NEXT_PUBLIC_APP_URL",
+      "NEXT_PUBLIC_API_URL"
+    ],
+    "prohibit_secrets_in_client_bundle": true
+  },
+
+  "9_file_storage_and_uploads": {
+    "max_file_size_mb": 25,
+    "max_body_payload_mb": 10,
+    "allowed_mime_types": [
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+      "application/pdf"
+    ],
+    "storage_adapter": "S3StorageAdapter (implements IStorageProvider)"
+  },
+
+  "10_caching_and_invalidation": {
+    "engine": "Redis 7 (Cluster or Standalone)",
+    "default_ttl_seconds": 3600,
+    "key_prefix": "app:cache:",
+    "invalidation_strategy": "Event-driven purge on database mutations (Write-Through / Stale-While-Revalidate)"
+  },
+
+  "11_background_jobs_and_queues": {
+    "queue_engine": "BullMQ (Redis-backed)",
+    "max_retries": 3,
+    "backoff_strategy": "exponential (initial: 1000ms)",
+    "job_timeout_seconds": 300,
+    "prohibit_blocking_io_in_http_thread": true
+  },
+
+  "12_swappable_adapters_and_seams": {
+    "storage": "IStorageProvider (LocalDiskProvider | S3Provider | GCSProvider)",
+    "search": "ISearchEngine (MeilisearchAdapter | ElasticAdapter | LocalInMemoryAdapter)",
+    "email": "IEmailService (ResendAdapter | SendGridAdapter | MockEmailAdapter)",
+    "auth": "IAuthProvider (OAuthProvider | OIDCProvider | LocalStubProvider)"
+  },
+
+  "13_design_system_and_styling": {
+    "framework": "Tailwind CSS v3+",
+    "tokens_file": "design-system/tokens.json",
+    "component_primitives": "Radix UI / Headless UI",
+    "active_aesthetic_archetype": "ethereal-glass",
+    "banned_styles": {
+      "raw_hex_codes": true,
+      "arbitrary_pixel_values": true,
+      "un-tokenized_fonts": true
+    },
+    "mandatory_interactive_states": [
+      "default",
+      "hover",
+      "active",
+      "focus-visible",
+      "disabled",
+      "loading"
+    ]
+  },
+
+  "14_timestamp_and_localization": {
+    "storage_timezone": "UTC",
+    "timestamp_format": "ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ)",
+    "database_type": "TIMESTAMPTZ",
+    "default_locale": "en-US"
+  },
+
+  "15_frontend_state_management": {
+    "server_cache_state": "TanStack Query v5",
+    "client_ui_state": "Zustand",
+    "prohibited_patterns": [
+      "Redux Toolkit for simple UI toggles",
+      "Prop-drilling deeper than 2 layers",
+      "Syncing server state into local useState"
+    ]
+  },
+
+  "16_network_and_cors": {
+    "allowed_origins": [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000"
+    ],
+    "credentials_allowed": true,
+    "content_security_policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';"
+  },
+
+  "17_seed_and_local_dev_data": {
+    "seed_command": "pnpm db:seed",
+    "reset_command": "pnpm db:reset",
+    "test_user_credentials": {
+      "email": "dev-user@example.com",
+      "role": "admin"
+    }
+  },
+
+  "18_input_sanitization_and_validation": {
+    "sanitize_incoming_html": true,
+    "strip_unknown_body_keys": true,
+    "max_string_length": 5000,
+    "escape_sql_wildcards": true
+  },
+
+  "19_disaster_recovery_and_rollback": {
+    "database_rollback_command": "pnpm db:migrate:rollback",
+    "git_revert_convention": "git revert <commit_hash> -m 1",
+    "snapshot_restore_procedure": "docs/runbooks/database-restore.md"
+  },
+
+  "20_testing_and_verification_rules": {
+    "zero_unsolicited_terminal_tests": true,
+    "static_verification_mandatory": true,
+    "test_runner_command_on_user_request": "pnpm test",
+    "e2e_runner_command_on_user_request": "pnpm test:e2e"
+  }
+}

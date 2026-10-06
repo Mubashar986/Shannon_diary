@@ -1,0 +1,49 @@
+{
+  "version": "3.1.0",
+  "skills": {
+    "roadmap-wbs-planner": {
+      "source": "skills/core/roadmap-wbs-planner/SKILL.md",
+      "task_types": ["greenfield", "brownfield-onboarding", "roadmap"],
+      "artifact": "roadmap.md"
+    },
+    "narrsistic-pluto": {
+      "source": "skills/core/narrsistic-pluto/SKILL.md",
+      "task_types": ["architecture", "feature", "ui", "bug", "refactor", "algorithm"],
+      "artifact": "architecture-analysis.md"
+    },
+    "converged-task-blueprint": {
+      "source": "skills/core/converged-task-blueprint/SKILL.md",
+      "task_types": ["feature", "ui", "bug", "refactor", "algorithm", "architecture"],
+      "artifact": "task_blueprint.md"
+    },
+    "testing-verification": {
+      "source": "skills/core/testing-verification/SKILL.md",
+      "task_types": ["feature", "refactor", "bug", "ui", "algorithm", "architecture"],
+      "artifact": "verification.md"
+    }
+  },
+  "required_skill_sets": {
+    "feature": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "bug": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "refactor": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "architecture": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "ui": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "algorithm": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "concurrency": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "persistence": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "search": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "security-protocol": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "networking": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "performance": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "brand-system": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "web-marketing-ui": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "web-product-ui": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "responsive-mobile-web-ui": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "native-mobile-ui": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "ui-redesign": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "stitch-ui": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "ui-audit": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "user-research": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"],
+    "workflow-optimization": ["narrsistic-pluto", "converged-task-blueprint", "testing-verification"]
+  }
+}

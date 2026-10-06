@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "Heisenberg OS",
+  "version": "3.0.0",
+  "description": "Central configuration file for the Heisenberg OS dual-graph workflow, portable agent policy, governance, and Git protocols.",
+  "mode": "solo",
+  "agent_policy": {
+    "canonical_instructions": "AGENTS.md",
+    "policy_path": ".heisenberg/policy.json",
+    "skills_path": ".heisenberg/skills.json",
+    "validation_command": "python scripts/heisenberg_guard.py validate --workspace ."
+  },
+  "engine": {
+    "graperoot_port": 8080,
+    "transport": "streamableHttp",
+    "mcp_url": "http://127.0.0.1:8080/mcp",
+    "max_read_chars": 20000,
+    "strict_anchor_reads": true,
+    "enforce_blast_radius": true,
+    "auto_sync_graph": true
+  },
+  "governance": {
+    "zero_terminal_testing": true,
+    "require_adr_for_new_tech": true,
+    "terminal_error_lock": true,
+    "auto_5_whys_on_failure": true,
+    "evidence_tiers": [
+      "VERIFIED",
+      "INFERRED",
+      "ASSUMED",
+      "UNKNOWN",
+      "BLOCKED"
+    ],
+    "mandatory_cs_domain_learning": true
+  },
+  "git": {
+    "target_branch": "main",
+    "branch_prefix": "feat/task-",
+    "commit_convention": "conventional_commits",
+    "commit_format": "<type>(<scope>): [Task-X.Y] <summary>",
+    "require_pull_request": false,
+    "auto_stage_only_task_files": true
+  },
+  "design_system": {
+    "enforce_the_muses": true,
+    "enforce_hci_foundations": true,
+    "min_touch_target_px": 48,
+    "wcag_accessibility_target": "AA",
+    "zero_raw_hex_codes": true,
+    "zero_arbitrary_px": true,
+    "zero_mock_data": true,
+    "tokens_path": "design-system/tokens.json",
+    "active_aesthetic_archetype": "ethereal-glass"
+  }
+}

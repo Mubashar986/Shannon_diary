@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "purpose": "Streamlined hackathon fast-path. Direct UI implementation using converged blueprints and testing.",
+  "surface_routes": {
+    "brand-system": {"required_before_edit": [], "required_before_complete": ["verification.md"]},
+    "web-marketing-ui": {"required_before_edit": [], "required_before_complete": ["verification.md"]},
+    "web-product-ui": {"required_before_edit": [], "required_before_complete": ["verification.md"]},
+    "responsive-mobile-web-ui": {"required_before_edit": [], "required_before_complete": ["verification.md"]},
+    "native-mobile-ui": {"required_before_edit": [], "required_before_complete": ["verification.md"]},
+    "ui-redesign": {"required_before_edit": [], "required_before_complete": ["verification.md"]},
+    "ui-audit": {"required_before_edit": [], "required_before_complete": ["verification.md"]},
+    "stitch-ui": {"required_before_edit": [], "required_before_complete": ["verification.md"]}
+  },
+  "rules": {
+    "style_selection": "Direct Tailwind CSS + Lucide React + clean MVP design.",
+    "product_ui": "Build functional, responsive components with 4 core states (idle, loading, success, error)."
+  }
+}

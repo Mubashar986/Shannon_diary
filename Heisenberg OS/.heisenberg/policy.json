@@ -1,0 +1,24 @@
+{
+  "$schema": "./schemas/task-manifest.schema.json",
+  "version": "3.0.0",
+  "mode": "advisory",
+  "artifact_root": ".heisenberg/artifacts",
+  "task_root": ".heisenberg/tasks",
+  "receipt_root": ".heisenberg/receipts",
+  "gates": {
+    "require_task_manifest_for_product_edits": false,
+    "require_planning_artifact_before_product_edits": false,
+    "block_destructive_git_commands": true,
+    "require_receipt_before_completion": false
+  },
+  "capabilities": {
+    "graperoot": {
+      "required_by_default": false
+    }
+  },
+  "enforcement_levels": {
+    "advisory": "Instructions and validation guidance without blocking local file edits.",
+    "guarded": "Native hooks check blueprints before code changes.",
+    "enforced": "CI validates policy before merge."
+  }
+}
