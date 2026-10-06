@@ -8,8 +8,8 @@ router = APIRouter(prefix="/entities", tags=["Entities"])
 @router.get("", response_model=List[EntityResponse])
 async def list_entities(
     category: Optional[str] = None,
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0)
+    limit: int = 20,
+    offset: int = 0
 ):
     """Retrieve entities, optionally filtered by category."""
     try:
@@ -17,7 +17,9 @@ async def list_entities(
         query = supabase.table("entities").select("*")
         if category:
             query = query.eq("category", category)
-        response = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+        l = int(limit) if isinstance(limit, (int, str)) else 20
+        o = int(offset) if isinstance(offset, (int, str)) else 0
+        response = query.order("created_at", desc=True).range(o, o + l - 1).execute()
         return response.data or []
     except Exception as e:
         raise HTTPException(
