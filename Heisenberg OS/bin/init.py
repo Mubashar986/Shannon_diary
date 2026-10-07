@@ -83,12 +83,17 @@ def main() -> int:
     for host in hosts:
         files.extend(HOST_FILES[host])
     print(f"Heisenberg initializer: {'APPLY' if args.apply else 'DRY RUN'}\nTarget: {target_root}")
+    skipped: list[str] = []
     for relative in dict.fromkeys(files):
         source = SOURCE_ROOT / relative
         if not source.exists():
-            print(f"MISSING {relative} in Heisenberg source", file=sys.stderr)
-            return 2
+            skipped.append(relative)
+            continue
         print(write_file(source, target_root / relative, args.apply, args.force))
+    if skipped:
+        print("\nNot bundled in this version, skipped:", file=sys.stderr)
+        for relative in skipped:
+            print(f"  {relative}", file=sys.stderr)
     if not args.apply:
         print("\nReview the plan, then rerun with --apply. Existing files are skipped unless --force is supplied.")
     else:

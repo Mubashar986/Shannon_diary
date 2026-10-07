@@ -18,6 +18,12 @@ WRITE_TOOL_NAMES = {
     "write_to_file", "replace_file_content", "multi_replace_file_content",
     "Write", "TabWrite", "edit_file", "Edit",
 }
+DESTRUCTIVE_GIT = (
+    "reset --hard", "clean -", "checkout -- ", "restore --source", "restore .",
+    "branch -d", "branch -D", "push --force", "push -f", "stash drop",
+    "stash clear", "--no-verify", "gc --prune", "filter-branch",
+)
+COMMAND_KEYS = ("command", "cmd", "script", "ShellCommand")
 
 
 def read_json(path: Path) -> dict[str, Any] | None:
@@ -25,6 +31,33 @@ def read_json(path: Path) -> dict[str, Any] | None:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
+
+
+def gate_config(policy: dict[str, Any] | None) -> dict[str, Any]:
+    """Local hooks only block when the policy says to. Advisory mode never refuses an edit."""
+    policy = policy or {}
+    gates = policy.get("gates") or {}
+    return {
+        "mode": policy.get("mode", "advisory"),
+        "require_task": bool(gates.get("require_task_manifest_for_product_edits", False)),
+        "require_planning": bool(gates.get("require_planning_artifact_before_product_edits", False)),
+        "block_git": bool(gates.get("block_destructive_git_commands", True)),
+    }
+
+
+def command_texts(payload: Any) -> list[str]:
+    """Any shell string in the tool payload, regardless of host tool naming."""
+    found: list[str] = []
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            if isinstance(value, str) and key in COMMAND_KEYS:
+                found.append(value)
+            else:
+                found.extend(command_texts(value))
+    elif isinstance(payload, list):
+        for item in payload:
+            found.extend(command_texts(item))
+    return found
 
 
 def workspace_from(payload: dict[str, Any], explicit: str | None) -> Path:
@@ -77,12 +110,18 @@ def validate(workspace: Path, require_task: bool = False) -> tuple[bool, list[st
     policy = read_json(paths["policy"])
     skills = read_json(paths["skills"])
     ui_workflow = read_json(paths["ui_workflow"])
-    if policy is None:
-        errors.append(".heisenberg/policy.json is missing or invalid JSON")
+    if not paths["policy"].is_file():
+        errors.append(".heisenberg/policy.json is missing")
+    elif policy is None:
+        errors.append(".heisenberg/policy.json is present but not valid JSON")
     if skills is None:
         errors.append(".heisenberg/skills.json is missing or invalid JSON")
     if ui_workflow is None:
         errors.append(".heisenberg/ui-workflow.json is missing or invalid JSON")
+    if policy is not None:
+        mode = policy.get("mode")
+        if mode not in {"advisory", "guarded", "enforced"}:
+            errors.append(f".heisenberg/policy.json: unknown mode {mode!r}; expected advisory, guarded, or enforced")
     if errors:
         return False, errors, warnings
 
@@ -163,9 +202,18 @@ def target_path(payload: dict[str, Any], host: str) -> str:
     return str(tool_input.get("path", tool_input.get("file_path", "")))
 
 
-def is_control_path(path: str) -> bool:
+def relative_to(path: str, workspace: Path) -> str:
     normalized = path.replace("\\", "/")
-    return any(normalized.endswith(item) or f"/{item}" in normalized for item in CONTROL_PATHS)
+    root = str(workspace).replace("\\", "/").rstrip("/")
+    if len(normalized) > len(root) and normalized[: len(root)].lower() == root.lower():
+        return normalized[len(root):].lstrip("/")
+    return normalized
+
+
+def is_control_path(path: str, workspace: Path) -> bool:
+    """Match against the workspace-relative path so app folders named core/ or config/ stay product code."""
+    relative = relative_to(path, workspace)
+    return any(relative == item or relative.startswith(item) for item in CONTROL_PATHS)
 
 
 def tool_name(payload: dict[str, Any], host: str) -> str:
@@ -205,8 +253,25 @@ def hook(args: argparse.Namespace) -> int:
     if args.event == "pre-tool":
         name = tool_name(payload, args.host)
         path = target_path(payload, args.host)
-        if name not in WRITE_TOOL_NAMES or is_control_path(path):
+        gates = gate_config(read_json(paths["policy"]))
+        if gates["block_git"]:
+            for command in command_texts(payload):
+                lowered = command.replace("\\", "/").lower()
+                if "git" in lowered and any(token in lowered for token in DESTRUCTIVE_GIT):
+                    return emit(
+                        args.host, args.event, False,
+                        "Destructive git operation blocked by policy. Confirm with the user first.",
+                    )
+        if name not in WRITE_TOOL_NAMES or is_control_path(path, workspace):
             return emit(args.host, args.event, True)
+        if paths["policy"].is_file() and read_json(paths["policy"]) is None:
+            return emit(
+                args.host, args.event, False,
+                ".heisenberg/policy.json exists but is not valid JSON. Repair it (control-path edits stay allowed), "
+                "then rerun: python scripts/heisenberg_guard.py validate --workspace .",
+            )
+        if gates["mode"] not in {"guarded", "enforced"} or not gates["require_task"]:
+            return emit(args.host, args.event, True, f"Advisory mode ({gates['mode']}): no task manifest required for this edit.")
         manifests = active_manifests(paths)
         if not manifests:
             return emit(args.host, args.event, False, "Create an active .heisenberg/tasks manifest before editing product code.")
@@ -214,8 +279,9 @@ def hook(args: argparse.Namespace) -> int:
         if manifest.get("status") not in {"approved", "implementing"}:
             return emit(args.host, args.event, False, "Task must be approved or implementing before editing product code.")
         task_id = manifest.get("task_id", "")
+        required = manifest.get("required_before_edit", []) if gates["require_planning"] else []
         missing = [
-            artifact for artifact in manifest.get("required_before_edit", [])
+            artifact for artifact in required
             if not (paths["artifacts"] / task_id / artifact).is_file()
         ]
         if missing:
