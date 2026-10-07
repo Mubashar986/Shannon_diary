@@ -254,15 +254,15 @@ export function App() {
               <ul className="text-[11px] space-y-1 text-neutral-400">
                 <li className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-3 h-3 text-emerald-400" /> 
-                  FastAPI REST Core
+                  Per-user RLS via forwarded token
                 </li>
                 <li className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-3 h-3 text-emerald-400" /> 
-                  pgvector HNSW Ready
+                  Errors visible, never faked
                 </li>
-                <li className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-400" /> 
-                  Multi-Agent Agnostic
+                <li className="flex items-center gap-1.5 text-neutral-500">
+                  <AlertTriangle className="w-3 h-3 text-amber-400" /> 
+                  pgvector tables present, unused
                 </li>
               </ul>
             </div>
@@ -294,7 +294,7 @@ export function App() {
                 Active Records & Entities
               </h1>
               <p className="text-xs text-neutral-400 mt-0.5">
-                Generic repository linked to Supabase PostgreSQL and semantic vector stores.
+                Records are scoped to your signed-in Supabase session, plus anything marked public.
               </p>
             </div>
             <button
