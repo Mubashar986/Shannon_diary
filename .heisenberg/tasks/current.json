@@ -1,24 +1,28 @@
 {
-  "task_id": "SPRINT-0",
+  "task_id": "SPRINT-1",
   "task_type": "sprint",
-  "status": "planned",
-  "title": "Pre-hackathon setup (idea not yet announced)",
+  "status": "complete",
+  "title": "NovaWorks AI Meeting to Project CRM",
   "selected_skills": ["sprint", "verify"],
   "required_before_edit": [],
   "required_artifacts": ["sprint.md", "verify.md"],
   "files_in_scope": [
-    "AGENTS.md",
-    ".heisenberg/**",
-    "scripts/heisenberg_guard.py",
     "contracts/api.md",
-    "AGENT_RUNBOOK.md"
+    "README.md",
+    "Shannons_diary/database/schema_novaworks.sql",
+    "Shannons_diary/database/seed_novaworks_users.py",
+    "Shannons_diary/backend/app/schemas/novaworks.py",
+    "Shannons_diary/backend/app/routers/novaworks.py",
+    "Shannons_diary/backend/app/main.py",
+    "Shannons_diary/frontend/src/lib/novaworksApi.ts",
+    "Shannons_diary/frontend/src/App.tsx"
   ],
   "requires_graperoot": false,
   "ui_surface": null,
   "lanes": {
     "orchestrator": {
-      "owns": ["contracts/api.md", ".heisenberg/tasks/current.json", "AGENT_RUNBOOK.md"],
-      "note": "The human and the planning agent. Owns the contract and the ownership map."
+      "owns": ["contracts/api.md", ".heisenberg/tasks/current.json", "README.md"],
+      "note": "Owns the contract and sprint status."
     },
     "frontend": {
       "owns": ["Shannons_diary/frontend/src/**", "Shannons_diary/frontend/index.html"],
@@ -29,5 +33,5 @@
       "never_touch": ["Shannons_diary/frontend/src/**"]
     }
   },
-  "notes": "At idea reveal: create .heisenberg/artifacts/SPRINT-1/sprint.md via the sprint skill, set status to implementing, and replace files_in_scope with the real manifest."
+  "notes": "Infinity Hack '26 NovaWorks AI Project CRM build."
 }

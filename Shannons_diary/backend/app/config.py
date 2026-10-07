@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     qwen_api_key: str = os.getenv("QWEN_API_KEY", "")
+    openrouter_api_key: str = os.getenv("OPENROUTER_API_KEY", "")
+    openrouter_model: str = os.getenv("OPENROUTER_MODEL", "nvidia/nemotron-3-ultra-550b-a55b:free")
     
     environment: str = os.getenv("ENVIRONMENT", "development")
     # Never add "*": with allow_credentials it echoes any origin, so any site could

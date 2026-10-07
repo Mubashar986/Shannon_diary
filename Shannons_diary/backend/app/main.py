@@ -3,12 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.config import settings
 from app.db import UpstreamError
-from app.routers import entities, search, ai
+from app.routers import entities, search, ai, novaworks
+from app.crm_db import seed_demo_users
+
+# Auto-seed 10 demo users on startup if not present
+seed_demo_users()
 
 app = FastAPI(
-    title="Hackathon API (heisenberg-lite)",
-    description="FastAPI + Supabase. Per-user RLS enforced by forwarding the caller's access token.",
-    version="1.1.0"
+    title="NovaWorks CRM & Hackathon API (heisenberg-lite)",
+    description="FastAPI + NovaWorks CRM. Role-based access control and AI transcript processing.",
+    version="1.2.0"
 )
 
 
@@ -29,6 +33,7 @@ app.add_middleware(
 )
 
 # Mount modular routers
+app.include_router(novaworks.router, prefix="/api/v1")
 app.include_router(entities.router, prefix="/api/v1")
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(ai.router, prefix="/api/v1")
@@ -42,7 +47,8 @@ async def health_check():
         "supabase_configured": bool(
             settings.supabase_anon_key and "your-project" not in settings.supabase_url
         ),
-        "ai_configured": bool(settings.gemini_api_key),
+        "ai_configured": bool(settings.openrouter_api_key or settings.gemini_api_key),
+        "ai_model": settings.openrouter_model if settings.openrouter_api_key else "gemini-2.5-flash",
         "auth_required": True,
     }
 
