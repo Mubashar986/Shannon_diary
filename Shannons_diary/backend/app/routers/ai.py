@@ -1,53 +1,57 @@
 import httpx
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from app.auth import User, get_current_user
 from app.config import settings
-from app.schemas.entity import AICompletionRequest, AICompletionResponse
+from app.schemas.entity import AICompletionRequest, AICompletionResponse, ALLOWED_MODELS
 
 router = APIRouter(prefix="/ai", tags=["AI Copilot"])
 
-@router.post("/complete", response_model=AICompletionResponse)
-async def ai_complete(payload: AICompletionRequest):
-    """
-    Model-agnostic AI completion endpoint.
-    Routes to configured providers (Gemini, OpenAI, or direct fallback mock).
-    """
-    # 1. Gemini / Google AI Studio route
-    if settings.gemini_api_key:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{payload.model}:generateContent?key={settings.gemini_api_key}"
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(
-                    url,
-                    json={
-                        "contents": [
-                            {"role": "user", "parts": [{"text": f"{payload.system_instruction}\n\n{payload.prompt}"}]}
-                        ],
-                        "generationConfig": {
-                            "temperature": payload.temperature,
-                            "maxOutputTokens": payload.max_tokens
-                        }
-                    }
-                )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    text = data["candidates"][0]["content"]["parts"][0]["text"]
-                    return AICompletionResponse(
-                        model=payload.model,
-                        result=text,
-                        usage={"total_tokens": data.get("usageMetadata", {}).get("totalTokenCount", 0)}
-                    )
-        except Exception as e:
-            # Fall through to fallback
-            pass
+GEMINIS = {
+    "gemini-2.5-flash-lite": "gemini-2.5-flash-lite",
+    "gemini-2.5-flash": "gemini-2.5-flash",
+    "gemini-2.5-pro": "gemini-2.5-pro",
+    "gemini-2.0-flash": "gemini-2.0-flash",
+}
 
-    # 2. Mock / Dev Fallback (Ensures frontend team is never blocked if keys are missing)
-    mock_reply = (
-        f"[Dev AI Copilot Response ({payload.model})]\n"
-        f"Prompt received: {payload.prompt[:80]}...\n"
-        f"Ready to synthesize insights, embeddings, or agent actions."
-    )
+
+@router.post("/complete", response_model=AICompletionResponse)
+async def ai_complete(payload: AICompletionRequest, user: User = Depends(get_current_user)):
+    """Gemini-backed completion. Authenticated, because every call spends a paid quota.
+
+    Only Gemini is implemented. The previous version answered with a fake string
+    whenever the real call failed, so the UI could never tell a working model from
+    an unconfigured one.
+    """
+    if payload.model not in ALLOWED_MODELS:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, f"Unsupported model. Choose one of: {', '.join(sorted(ALLOWED_MODELS))}"
+        )
+    if not settings.gemini_api_key:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "AI provider not configured (GEMINI_API_KEY is empty)")
+
+    model = GEMINIS[payload.model]
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    body = {
+        "contents": [{"role": "user", "parts": [{"text": f"{payload.system_instruction}\n\n{payload.prompt}"}]}],
+        "generationConfig": {"temperature": payload.temperature, "maxOutputTokens": payload.max_tokens},
+    }
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(45.0, connect=10.0)) as client:
+            resp = await client.post(url, params={"key": settings.gemini_api_key}, json=body)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "AI provider unreachable") from exc
+
+    if resp.status_code != 200:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"AI provider returned {resp.status_code}")
+    try:
+        data = resp.json()
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+    except (ValueError, KeyError, IndexError) as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "AI provider returned an unexpected response") from exc
+
     return AICompletionResponse(
-        model=payload.model or "dev-mock-model",
-        result=mock_reply,
-        usage={"total_tokens": 42}
+        model=model,
+        result=text,
+        usage={"total_tokens": data.get("usageMetadata", {}).get("totalTokenCount", 0)},
     )

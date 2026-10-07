@@ -1,47 +1,48 @@
-from typing import List, Any
-from fastapi import APIRouter, HTTPException, status
-from app.db import get_supabase
+from typing import Any, List
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from app.auth import User, get_current_user
+from app.config import settings
+from app.db import UpstreamError, rest_select
 from app.schemas.entity import SearchQuery
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
-@router.post("", response_model=List[Any])
-async def search_records(query: SearchQuery):
-    """
-    Unified Search Endpoint:
-    - Text search over title and content.
-    - Semantic vector search via RPC match_embeddings when use_vector is true.
-    """
-    try:
-        supabase = get_supabase()
-        
-        if query.use_vector:
-            # Semantic search path via Supabase RPC
-            # Note: For actual vector search, query embedding vector must be supplied
-            # or generated via embedding model.
-            rpc_params = {
-                "query_embedding": [0.0] * 1536,  # Placeholder or generate via AI
-                "match_threshold": 0.4,
-                "match_count": query.limit or 10
-            }
-            try:
-                rpc_res = supabase.rpc("match_embeddings", rpc_params).execute()
-                return rpc_res.data or []
-            except Exception as rpc_err:
-                # Fallback to standard text search if vector index isn't populated
-                pass
+# PostgREST reads these as filter-list separators, so they cannot come from a user.
+_UNSAFE = {"(", ")", ",", "%", '"', "'"}
 
-        # Default fast text ILIKE search
-        db_query = supabase.table("entities").select("*")
-        if query.category:
-            db_query = db_query.eq("category", query.category)
-            
-        db_query = db_query.or_(f"title.ilike.%{query.query}%,content.ilike.%{query.query}%")
-        response = db_query.limit(query.limit or 10).execute()
-        return response.data or []
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search failed: {str(e)}"
+# Semantic search was scaffolded but never wired: the embeddings table is empty and
+# no code produces vectors. It stays unimplemented rather than pretending to work.
+
+
+def _safe(term: str) -> str:
+    return "".join(ch for ch in term if ch not in _UNSAFE).strip()
+
+
+@router.post("", response_model=List[Any])
+async def search_records(query: SearchQuery, user: User = Depends(get_current_user)):
+    """Text search over the caller's rows plus public ones."""
+    term = _safe(query.query)
+    if not term:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Query contains no searchable characters")
+
+    # One nested logic tree: (visibility) AND (text match). PostgREST spells the inner
+    # operators or(...); or_() is only valid as a top-level query parameter.
+    params: dict[str, Any] = {
+        "and": (
+            f"(or(user_id.eq.{user.id},is_public.eq.true),"
+            f"or(title.ilike.*{term}*,content.ilike.*{term}*))"
         )
+    }
+    if query.category:
+        params["category"] = f"eq.{query.category}"
+
+    try:
+        rows = await rest_select(
+            user.token, "entities", params=params, order="created_at.desc", limit=query.limit or 10
+        )
+    except UpstreamError as exc:
+        detail = exc.message if settings.environment == "development" else "Search failed"
+        raise HTTPException(exc.status_code, detail) from exc
+    return rows

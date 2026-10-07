@@ -1,13 +1,23 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.config import settings
+from app.db import UpstreamError
 from app.routers import entities, search, ai
 
 app = FastAPI(
-    title="Shannons Diary - Hackathon API",
-    description="Model-agnostic, pgvector & Supabase-powered backend API engine",
-    version="1.0.0"
+    title="Hackathon API (heisenberg-lite)",
+    description="FastAPI + Supabase. Per-user RLS enforced by forwarding the caller's access token.",
+    version="1.1.0"
 )
+
+
+@app.exception_handler(UpstreamError)
+async def upstream_error_handler(request: Request, exc: UpstreamError):
+    """Backstop so a Supabase message can never become a 500 with internals in it."""
+    detail = exc.message if settings.environment == "development" else "Request could not be completed"
+    return JSONResponse(status_code=exc.status_code, content={"detail": detail})
+
 
 # CORS Middleware configuration
 app.add_middleware(
@@ -25,11 +35,15 @@ app.include_router(ai.router, prefix="/api/v1")
 
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Liveness probe and system status."""
+    """Liveness probe. Each flag is a capability actually configured, not a scaffolded table."""
     return {
         "status": "online",
         "environment": settings.environment,
-        "supabase_configured": bool(settings.supabase_anon_key and "your-project" not in settings.supabase_url)
+        "supabase_configured": bool(
+            settings.supabase_anon_key and "your-project" not in settings.supabase_url
+        ),
+        "ai_configured": bool(settings.gemini_api_key),
+        "auth_required": True,
     }
 
 @app.get("/", tags=["Root"])

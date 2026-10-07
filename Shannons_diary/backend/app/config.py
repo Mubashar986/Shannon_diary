@@ -17,11 +17,12 @@ class Settings(BaseSettings):
     qwen_api_key: str = os.getenv("QWEN_API_KEY", "")
     
     environment: str = os.getenv("ENVIRONMENT", "development")
+    # Never add "*": with allow_credentials it echoes any origin, so any site could
+    # call this API from a logged-in visitor's browser. Set CORS_ORIGINS in .env instead.
     cors_origins: List[str] = [
         "http://localhost:5173",
         "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "*"
+        "http://127.0.0.1:5173"
     ]
 
     class Config:
