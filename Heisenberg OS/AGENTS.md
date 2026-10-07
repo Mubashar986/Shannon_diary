@@ -1,61 +1,37 @@
-# Heisenberg OS Agent Contract
+# Heisenberg OS 3.1 - Hackathon Agent Contract
 
-This file is the portable entrypoint for agents working in a repository that
-adopts Heisenberg OS. It is intentionally short. Detailed guidance remains in
-`core/` and `skills/`; do not load every skill by default.
+> **QUICK REFERENCE:**  
+> For the complete hackathon system overview, live database status, and operational loop, see [`AGENT_RUNBOOK.md`](../AGENT_RUNBOOK.md).
 
-For a host without GrapeRoot, the portable policy in this file and
-`.heisenberg/policy.json` takes precedence over older enhanced-mode wording in
-the detailed runbooks. Those runbooks describe the stronger graph-enabled path;
-they must not make an unavailable capability appear available or block ordinary
-repository work by themselves.
+---
 
-## Bootstrap
+## 1. Operating Mode: Advisory & High-Velocity
 
-1. Find the repository root and read `.heisenberg/policy.json`.
-2. Run `python scripts/heisenberg_guard.py validate --workspace .` when the
-   runtime permits it. Report a missing optional capability; do not pretend it
-   is available.
-3. Read the active task manifest at
-   `.heisenberg/tasks/<task-id>.json`, if one is supplied or already active.
-4. Load only the skills listed in `.heisenberg/skills.json` for that task type.
-   Read each selected `SKILL.md` in full before creating its artifact. Record
-   the selected skill IDs, source paths, versions, and evidence in the receipt.
+This workspace is operating under **Heisenberg OS 3.1 (Hackathon Mode)**:
+- Policy is configured to `"mode": "advisory"` in `.heisenberg/policy.json`.
+- Tools and code edits are never locked or blocked.
+- GrapeRoot is offline; ordinary static analysis, standard AST inspection, and direct test execution are standard.
 
-## Task and artifact gates
+---
 
-- Do not change product code until an active task manifest exists and every
-  artifact listed in `required_before_edit` is present.
-- Store generated task artifacts under `.heisenberg/artifacts/<task-id>/`.
-- Artifacts must name their task ID, selected skills, evidence, and files in
-  scope. A required artifact is stale after a scoped code edit until its
-  receipt is refreshed.
-- `cs-domain-learning` is MANDATORY for all tasks. Every task must understand
-  and document the underlying computer science first principles, data structures,
-  invariants, and system semantics in `cs-concepts.md` before editing product code.
-- For a task with `ui_surface`, read `.heisenberg/ui-workflow.json` before
-  selecting a style or editing code. Use every required foundation skill—including
-  HCI foundation skills (`pact-context-analysis`, `hci-usability-principles`,
-  `task-modeling-goms-klm`, `heuristic-evaluation-audit`) and The Muses (Picasso,
-  Escher, Vermeer)—and select no more than one compatible style skill. A style skill
-  never replaces Picasso, Escher, Vermeer, HCI usability standards, data contracts,
-  accessibility, or verification.
+## 2. The 3-Step Core Lifecycle
 
-## Evidence and safety
+For every task or feature, execute the converged cycle:
 
-- Prefer repository evidence and available tools. Mark unsupported or
-  unverified capabilities as `UNKNOWN` rather than inventing proof.
-- GrapeRoot is an optional capability unless the active task manifest marks it
-  required. If available, use it for focused impact analysis; if unavailable,
-  use the project's normal static-analysis and review path.
-- Do not overwrite user changes, use destructive Git commands, alter global
-  agent configuration, or install software without explicit user permission.
-- Match verification to risk. Run configured checks when authorized and report
-  exactly what was or was not verified.
+1. **Step 1: Narrsistic Pluto (`skills/core/narrsistic-pluto/SKILL.md`)**
+   - Proposes **6 creative engineering approaches** dynamically.
+   - Saves to `architecture-analysis.md`.
+2. **Step 2: Converged Task Blueprint (`skills/core/converged-task-blueprint/SKILL.md`)**
+   - Combines mental models, CS data structures, 10-point architectural grill, exact file manifests, and rollback runbooks into `task_blueprint.md` (200+ lines).
+3. **Step 3: Implementation & Active Verification (`skills/core/testing-verification/SKILL.md`)**
+   - Implements code following [`UItasteskills/design-taste-frontend/SKILL.md`](UItasteskills/design-taste-frontend/SKILL.md).
+   - Generates and executes `verification.md` covering unit tests, **10 edge cases**, **10 failure cases**, and integration flow.
 
-## Completion
+---
 
-Before claiming a task is complete, run the policy validator, refresh the
-receipt, and report changed files, selected skills, artifacts, verification,
-and any remaining risks. Local rules and hooks help, but protected CI is the
-cross-agent enforcement boundary.
+## 3. UI Taste & Design Invariant
+
+All frontend modifications must follow [`UItasteskills/design-taste-frontend`](UItasteskills/design-taste-frontend/SKILL.md):
+- Strictly avoid generic AI-purple meshes and cliché template layouts.
+- Rely on crisp borders, strong typography contrast, and fluid micro-interactions.
+- Preserve the 1-click **"Judge Demo"** button in the header.
