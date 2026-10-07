@@ -115,47 +115,57 @@ END;
 $$;
 
 -- 6. Row Level Security (RLS) Configuration
+-- Every clause requires a real JWT. Do NOT add "OR auth.uid() IS NULL": with the
+-- anon key auth.uid() is NULL, which turns the clause into "true for every row"
+-- and lets anonymous visitors read, update, and delete anyone's data.
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.entities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.embeddings ENABLE ROW LEVEL SECURITY;
 
--- Profiles: Users can read/write their own profile
-CREATE POLICY "Users can view their own profile" 
-    ON public.profiles FOR SELECT 
+-- Profiles
+CREATE POLICY "profiles_select" ON public.profiles FOR SELECT
     USING (auth.uid() = id);
+CREATE POLICY "profiles_insert" ON public.profiles FOR INSERT
+    WITH CHECK (auth.uid() = id);
+CREATE POLICY "profiles_update" ON public.profiles FOR UPDATE
+    USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
-CREATE POLICY "Users can update their own profile" 
-    ON public.profiles FOR UPDATE 
-    USING (auth.uid() = id);
+-- Entities: owner sees everything, everyone else only rows marked public
+CREATE POLICY "entities_select" ON public.entities FOR SELECT
+    USING (auth.uid() = user_id OR is_public = true);
+CREATE POLICY "entities_insert" ON public.entities FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "entities_update" ON public.entities FOR UPDATE
+    USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "entities_delete" ON public.entities FOR DELETE
+    USING (auth.uid() = user_id);
 
--- Entities: Users can view own entities OR public ones; full control of own entities
-CREATE POLICY "Users can select own or public entities" 
-    ON public.entities FOR SELECT 
-    USING (auth.uid() = user_id OR is_public = true OR auth.uid() IS NULL);
-
-CREATE POLICY "Users can insert own entities" 
-    ON public.entities FOR INSERT 
-    WITH CHECK (auth.uid() = user_id OR auth.uid() IS NULL);
-
-CREATE POLICY "Users can update own entities" 
-    ON public.entities FOR UPDATE 
-    USING (auth.uid() = user_id OR auth.uid() IS NULL);
-
-CREATE POLICY "Users can delete own entities" 
-    ON public.entities FOR DELETE 
-    USING (auth.uid() = user_id OR auth.uid() IS NULL);
-
--- Embeddings: Read permitted for authorized entities
-CREATE POLICY "Users can select embeddings for accessible entities" 
-    ON public.embeddings FOR SELECT 
+-- Embeddings: reachable only through an entity the caller can see
+CREATE POLICY "embeddings_select" ON public.embeddings FOR SELECT
     USING (
         EXISTS (
-            SELECT 1 FROM public.entities e 
-            WHERE e.id = embeddings.entity_id 
-              AND (e.user_id = auth.uid() OR e.is_public = true OR auth.uid() IS NULL)
+            SELECT 1 FROM public.entities e
+            WHERE e.id = embeddings.entity_id
+              AND (e.user_id = auth.uid() OR e.is_public = true)
+        )
+    );
+CREATE POLICY "embeddings_insert" ON public.embeddings FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.entities e
+            WHERE e.id = embeddings.entity_id AND e.user_id = auth.uid()
         )
     );
 
-CREATE POLICY "Users can insert embeddings" 
-    ON public.embeddings FOR INSERT 
-    WITH CHECK (true);
+-- 7. Keep updated_at honest
+CREATE OR REPLACE FUNCTION public.touch_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = TIMEZONE('utc'::text, NOW());
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER entities_touch_updated_at
+    BEFORE UPDATE ON public.entities
+    FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
