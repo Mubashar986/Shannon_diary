@@ -13,23 +13,17 @@ import {
   ChevronRight,
   Filter,
   CheckCircle2,
+  AlertTriangle,
+  Loader2,
   Cpu
 } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { supabase, isSupabaseConfigured, signInAsDemo, hasDemoCredentials } from './lib/supabase';
 import { fetchEntities, createEntity, askAI, Entity } from './lib/api';
 
 export function App() {
-  const [entities, setEntities] = useState<Entity[]>([
-    {
-      id: 'demo-1',
-      title: 'Hackathon Starter Entity',
-      content: 'This workspace is primed for rapid 3-hour iteration. Ready for any idea.',
-      category: 'System',
-      status: 'active',
-      is_public: true,
-      created_at: new Date().toISOString()
-    }
-  ]);
+  const [entities, setEntities] = useState<Entity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [user, setUser] = useState<any>(null);
@@ -37,12 +31,12 @@ export function App() {
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
   const [newCategory, setNewCategory] = useState('general');
+  const [saving, setSaving] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
-    // Check initial Supabase auth state
     if (isSupabaseConfigured) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         setUser(session?.user ?? null);
@@ -58,12 +52,19 @@ export function App() {
 
   useEffect(() => {
     loadEntities();
-  }, [selectedCategory]);
+  }, [selectedCategory, user?.id]);
 
   async function loadEntities() {
-    const list = await fetchEntities(selectedCategory === 'all' ? undefined : selectedCategory);
-    if (list && list.length > 0) {
+    setLoading(true);
+    setError(null);
+    try {
+      const list = await fetchEntities(selectedCategory === 'all' ? undefined : selectedCategory);
       setEntities(list);
+    } catch (err: any) {
+      setEntities([]);
+      setError(err?.status === 401 ? 'Not signed in — use Continue with Google or Judge Demo.' : err?.message || 'Could not load records');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -71,33 +72,25 @@ export function App() {
     e.preventDefault();
     if (!newTitle.trim()) return;
 
-    const created = await createEntity({
-      title: newTitle,
-      content: newContent,
-      category: newCategory,
-      status: 'active',
-      is_public: true,
-      user_id: user?.id || undefined
-    });
-
-    if (created) {
-      setEntities([created, ...entities]);
-    } else {
-      // Local fallback
-      const localItem: Entity = {
-        id: `local-${Date.now()}`,
+    setSaving(true);
+    setError(null);
+    try {
+      const created = await createEntity({
         title: newTitle,
         content: newContent,
         category: newCategory,
         status: 'active',
-        created_at: new Date().toISOString()
-      };
-      setEntities([localItem, ...entities]);
+        is_public: true,
+      });
+      setEntities([created, ...entities]);
+      setNewTitle('');
+      setNewContent('');
+      setIsNewModalOpen(false);
+    } catch (err: any) {
+      setError(err?.message || 'Save failed — the record was not created');
+    } finally {
+      setSaving(false);
     }
-
-    setNewTitle('');
-    setNewContent('');
-    setIsNewModalOpen(false);
   }
 
   async function handleAskAI() {
@@ -105,10 +98,9 @@ export function App() {
     setIsAiLoading(true);
     setAiResponse(null);
     try {
-      const res = await askAI(aiPrompt);
-      setAiResponse(res);
-    } catch {
-      setAiResponse('AI processing completed.');
+      setAiResponse(await askAI(aiPrompt));
+    } catch (err: any) {
+      setAiResponse(`AI unavailable: ${err?.message || 'unknown error'}`);
     } finally {
       setIsAiLoading(false);
     }
@@ -116,23 +108,23 @@ export function App() {
 
   async function handleGoogleLogin() {
     if (!isSupabaseConfigured) {
-      alert('Please add your SUPABASE_URL and SUPABASE_ANON_KEY to .env to use Google OAuth.');
+      setError('Supabase is not configured in frontend/.env, so Google OAuth cannot run.');
       return;
     }
-    await supabase.auth.signInWithOAuth({
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: window.location.origin
-      }
+      options: { redirectTo: window.location.origin },
     });
+    if (oauthError) setError(`Google sign-in failed: ${oauthError.message}`);
   }
 
-  function handleDemoJudgeLogin() {
-    setUser({
-      id: 'judge-demo-user',
-      email: 'judge@hackathon.dev',
-      user_metadata: { full_name: 'Hackathon Judge' }
-    });
+  async function handleDemoJudgeLogin() {
+    setError(null);
+    try {
+      await signInAsDemo();
+    } catch (err: any) {
+      setError(err?.message || 'Demo sign-in failed');
+    }
   }
 
   const filteredEntities = entities.filter(ent => 
@@ -177,9 +169,9 @@ export function App() {
         <div className="flex items-center gap-3">
           <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-md bg-neutral-900 border border-neutral-800 text-[11px]">
             <Database className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-neutral-400">DB:</span>
-            <span className={isSupabaseConfigured ? "text-emerald-400 font-medium" : "text-amber-400 font-medium"}>
-              {isSupabaseConfigured ? "Connected" : "Local Mock"}
+            <span className="text-neutral-400">Session:</span>
+            <span className={user ? "text-emerald-400 font-medium" : "text-amber-400 font-medium"}>
+              {user ? "Signed in" : "Anonymous (API will reject writes)"}
             </span>
           </div>
 
@@ -191,8 +183,8 @@ export function App() {
                 </div>
                 <span className="text-[10px] text-neutral-400">Authenticated</span>
               </div>
-              <button 
-                onClick={() => { supabase.auth.signOut(); setUser(null); }}
+              <button
+                onClick={() => { void supabase.auth.signOut(); }}
                 className="p-2 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 transition-colors"
                 title="Sign Out"
               >
@@ -210,8 +202,9 @@ export function App() {
               </button>
               <button 
                 onClick={handleDemoJudgeLogin}
-                className="px-2.5 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 text-xs font-medium transition-all"
-                title="Bypass login for Judges"
+                disabled={!hasDemoCredentials}
+                className="px-2.5 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                title={hasDemoCredentials ? 'Sign in as the shared demo account' : 'Set VITE_DEMO_EMAIL and VITE_DEMO_PASSWORD in frontend/.env'}
               >
                 Judge Demo
               </button>
@@ -283,6 +276,17 @@ export function App() {
 
         {/* Center Main Stage */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
+          {error && (
+            <div className="flex items-start gap-2 p-3.5 rounded-xl bg-red-950/40 border border-red-800/60 text-xs text-red-200">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
+              <div className="flex-1">
+                <div className="font-semibold text-red-100 mb-0.5">Something is broken, and it is being shown on purpose</div>
+                <div className="font-mono text-[11px] leading-relaxed">{error}</div>
+              </div>
+              <button onClick={() => setError(null)} className="text-red-300 hover:text-white px-1" aria-label="Dismiss">✕</button>
+            </div>
+          )}
+
           {/* Top Banner Action */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-neutral-800">
             <div>
@@ -303,6 +307,22 @@ export function App() {
           </div>
 
           {/* Cards Grid */}
+          {loading ? (
+            <div className="flex items-center gap-2 text-xs text-neutral-400 py-10">
+              <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+              <span>Loading your records...</span>
+            </div>
+          ) : filteredEntities.length === 0 ? (
+            <div className="py-14 text-center border border-dashed border-neutral-800 rounded-2xl space-y-2">
+              <Database className="w-6 h-6 mx-auto text-neutral-600" />
+              <p className="text-sm font-medium text-neutral-300">No records here yet</p>
+              <p className="text-xs text-neutral-500">
+                {user
+                  ? 'This list is genuinely empty - not a hidden fallback. Use New Record to create the first one.'
+                  : 'Sign in to load your records.'}
+              </p>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredEntities.map((item) => (
               <div 
@@ -336,6 +356,7 @@ export function App() {
               </div>
             ))}
           </div>
+          )}
         </main>
 
         {/* Right Floating AI Copilot Panel */}
@@ -376,7 +397,7 @@ export function App() {
           </div>
 
           <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-800/40 text-[11px] text-cyan-300">
-            Agnostic: Easily swappable between Gemini 2.5, GLM-5.3, Kimi K3, and Qwen 3.8.
+            Gemini only. If GEMINI_API_KEY is unset the API returns 503 and the panel shows it.
           </div>
         </aside>
       </div>
@@ -431,9 +452,10 @@ export function App() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-xs font-semibold text-white transition-colors"
+                  disabled={saving || !newTitle.trim()}
+                  className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-xs font-semibold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save Record
+                  {saving ? 'Saving...' : 'Save Record'}
                 </button>
               </div>
             </form>
