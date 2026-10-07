@@ -1,0 +1,29 @@
+{
+  "version": "lite-1.0.0",
+  "profile": "heisenberg-lite",
+  "skills": {
+    "sprint": {
+      "source": ".heisenberg/skills/sprint/SKILL.md",
+      "task_types": ["sprint", "feature", "bug", "refactor", "ui", "algorithm", "architecture"],
+      "artifact": "sprint.md"
+    },
+    "verify": {
+      "source": ".heisenberg/skills/verify/SKILL.md",
+      "task_types": ["sprint", "feature", "bug", "refactor", "ui", "algorithm", "architecture"],
+      "artifact": "verify.md"
+    }
+  },
+  "required_skill_sets": {
+    "sprint": ["sprint", "verify"],
+    "feature": ["sprint", "verify"],
+    "bug": ["sprint", "verify"],
+    "refactor": ["sprint", "verify"],
+    "ui": ["sprint", "verify"],
+    "algorithm": ["sprint", "verify"],
+    "architecture": ["sprint", "verify"]
+  },
+  "opt_in_reference_library": {
+    "path": "Heisenberg OS/",
+    "note": "30 full-mode skills, HCI foundations, The Muses, and UI taste profiles. Read only on explicit human request. Never mandatory in this profile."
+  }
+}

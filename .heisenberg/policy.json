@@ -1,0 +1,27 @@
+{
+  "version": "lite-1.0.0",
+  "profile": "heisenberg-lite",
+  "mode": "advisory",
+  "artifact_root": ".heisenberg/artifacts",
+  "task_root": ".heisenberg/tasks",
+  "receipt_root": ".heisenberg/receipts",
+  "gates": {
+    "require_task_manifest_for_product_edits": false,
+    "require_planning_artifact_before_product_edits": false,
+    "require_receipt_before_completion": false,
+    "block_destructive_git_commands": true
+  },
+  "capabilities": {
+    "graperoot": {
+      "required_by_default": false,
+      "installed": false,
+      "note": "Enhanced-mode only. Never claim graph evidence in this profile."
+    }
+  },
+  "enforcement_levels": {
+    "advisory": "Hooks advise and block destructive git; they never refuse a file edit.",
+    "guarded": "Native hooks require an approved task manifest before product edits.",
+    "enforced": "CI validates policy before merge."
+  },
+  "notes": "Switch mode to guarded only after the idea is locked and one agent is working. Advisory is the default for multi-agent speed."
+}

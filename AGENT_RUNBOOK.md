@@ -1,153 +1,118 @@
-# HACKATHON AGENT RUNBOOK & OPERATIONAL PROTOCOL (Heisenberg OS 3.1)
+# Hackathon Runbook (heisenberg-lite)
 
-> **MANDATORY INSTRUCTION FOR ALL AI CODING AGENTS (Antigravity, Qoder, GLM, Kimi, Claude, Cursor):**  
-> Read this runbook before writing code. This workspace is pre-engineered for a **high-velocity 3-hour hackathon**. 
-> Follow the 4-stage cycle, respect stack invariants, and build upon the existing tested foundation.
+**For every coding agent, read once before touching code.**
+Entry point is [`AGENTS.md`](AGENTS.md) at this root. This file is the operational detail.
+
+The build target is a **2-hour window starting when the idea is announced**.
+Nothing below assumes the theme. `Shannons_diary/` is a placeholder project name; change
+the display strings in `frontend/index.html` and `App.tsx` when the idea lands, keep the
+folder name (renaming costs more than it buys).
 
 ---
 
-## 1. What Has Already Been Built & Verified (DO NOT REBUILD)
+## 1. State of the workspace — measured, not asserted
 
-The core infrastructure is **100% operational, compiled, and live-tested**. Do not recreate boilerplate.
-
-| Subsystem | Location | Status | Key Details |
+| Subsystem | Where | Status | Evidence |
 | :--- | :--- | :--- | :--- |
-| **Cloud Database** | `https://xbdhcmkzfzifykkiyccb.supabase.co` | **LIVE & TESTED** | Supabase PostgreSQL + `pgvector` enabled. Tables: `entities`, `embeddings` (HNSW cosine index), `profiles`, plus `match_embeddings` RPC function. |
-| **Backend API** | [`Shannons_diary/backend/`](file:///c:/Users/Abdul%20Jabbar%20Metlo/Desktop/Hackathon/Shannons_diary/backend/) | **LIVE & TESTED** | FastAPI on port `8000`. Async routers (`/entities`, `/search`, `/ai`, `/health`). Pydantic v2 schemas. Pre-installed `.venv`. |
-| **Frontend Web** | [`Shannons_diary/frontend/`](file:///c:/Users/Abdul%20Jabbar%20Metlo/Desktop/Hackathon/Shannons_diary/frontend/) | **LIVE & TESTED** | Vite + React 18 + TypeScript + Tailwind CSS on port `5173`. High-taste dark UI. 1,610 modules compiled with 0 errors. |
-| **Authentication** | Frontend & Supabase | **LIVE & TESTED** | **Google OAuth ("Continue with Google")** active + **1-click "Judge Demo"** bypass button for judges. |
-| **Secrets & Safety** | [`.gitignore`](file:///c:/Users/Abdul%20Jabbar%20Metlo/Desktop/Hackathon/.gitignore) | **ACTIVE** | All `.env`, `.venv`, and `node_modules` are strictly ignored. Never commit raw credentials. |
+| Supabase project | `xbdhcmkzfzifykkiyccb.supabase.co` | **VERIFIED** reachable | `GET /api/v1/entities` returned a live row; GoTrue v2.197.0 healthy |
+| Google OAuth provider | Supabase dashboard | **ENABLED** (`google: true` in `/auth/v1/settings`) | **not** walked end-to-end in a browser yet |
+| Email/password sign-in | Supabase dashboard | **ENABLED** (`email: true`, signup not disabled) | one full login pending the demo user |
+| FastAPI backend | `Shannons_diary/backend` | **VERIFIED** boots, 3 routers mount | `TestClient` exercised all routes |
+| Per-user auth | `app/auth.py`, `app/db.py` | **VERIFIED** for rejection paths | no token → 401; garbage token → 401 via GoTrue |
+| Authenticated read/write | backend ↔ PostgREST | **PENDING** | needs a real session; see §5 step 1 |
+| PostgREST query shapes | own-or-public, category, nested text search | **VERIFIED** against live data | returned correct rows and correct empty sets |
+| RLS isolation | `database/migrations/002_per_user_isolation.sql` | **WRITTEN, NOT APPLIED** | run it before the demo (one-time, dashboard SQL editor) |
+| Frontend build | `npm run build` (tsc -b + vite build) | **VERIFIED green** | 1610 modules, typecheck exit 0 |
+| `embeddings` table + `match_embeddings` | Supabase | **EXISTS, UNUSED** | 0 rows; no code writes vectors; `/search` never calls it |
+| AI copilot | `POST /api/v1/ai/complete` | **503 by design** | `GEMINI_API_KEY` is empty in `.env`; the old fake-success fallback is deleted |
+| GrapeRoot / dual-graph | `~/.dual-graph/graperoot.CMD` | **NOT RUNNING** | `doctor.py --json` → `healthy: false`, port 8080 closed. Out of scope for this event |
+| Git | local `main`, **no remote** | **UNBACKED UP** | add a remote and push before demo day |
 
----
+Anything not marked VERIFIED was either not run or is known-broken. Do not treat it as
+a capability, and do not demo it.
 
-## 2. Universal Schema Pattern (Idea-Agnostic)
+## 2. Two rules that were causing the damage
 
-You **do not need to write SQL migrations** when the hackathon theme is announced. The `entities` table in Supabase contains a flexible **`metadata JSONB`** column:
+1. **The guard no longer blocks edits.** `.heisenberg/policy.json` is `mode: "advisory"`
+   and `scripts/heisenberg_guard.py` reads it (it did not before — every write was denied).
+   The one thing still refused is destructive git (`reset --hard`, `clean -fd`,
+   `checkout --`, force push, `--no-verify`), because that gate is explicitly `true`.
+2. **`Heisenberg OS/core/rules/01-graperoot-mandate.md` does not apply here.** It forbids
+   any file edit until `doctor.py` reports healthy, which it cannot without the GrapeRoot
+   daemon. That rule is enhanced-mode only. If an agent cites it, it is wrong for this
+   workspace.
 
-```typescript
-interface Entity {
-  id: string;              // UUID
-  user_id?: string;        // Owner UUID (auth.users)
-  title: string;           // Primary label or headline
-  content?: string;        // Body text, transcript, code, or payload
-  category: string;        // Partition (e.g. 'general', 'agents', 'finance')
-  status: string;          // State ('active', 'completed', 'flagged')
-  metadata: Record<string, any>; // Arbitrary domain JSON payload
-  is_public: boolean;
-}
-```
+## 3. Skill load
 
-- **If the idea is Fintech:** Store ticker, risk metrics, or portfolio JSON in `metadata`.
-- **If the idea is Healthcare:** Store patient vitals, diagnosis, and triage JSON in `metadata`.
-- **If the idea is DevTools / Agents:** Store execution trace, token count, and step logs in `metadata`.
+Full-mode Heisenberg asks an agent to read ~60,000 tokens of skills and rules and write 7
+artifacts before coding. Lite reads `AGENTS.md` + 2 short skills and writes **one** artifact.
 
----
+| Skill | File | Produces | Timebox |
+| :--- | --- | --- | --- |
+| `sprint` | `.heisenberg/skills/sprint/SKILL.md` | `.heisenberg/artifacts/<task>/sprint.md` (≤60 lines) | 15 min |
+| `verify` | `.heisenberg/skills/verify/SKILL.md` | `.heisenberg/artifacts/<task>/verify.md` | 20 min |
 
-## 3. The 4-Stage Heisenberg OS Hackathon Cycle
+The 30 full-mode skills, the HCI set, The Muses, and the UI-taste profiles stay under
+`Heisenberg OS/` as **opt-in reference**. Load one only when a human names it.
 
-Every feature or product pivot must follow this rapid 4-stage progression:
+## 4. The 2-hour loop
 
-```mermaid
-flowchart LR
-    S0["Stage 0: Scope (3 min)"] --> S1["Stage 1: Pluto (10 min)"]
-    S1 --> S2["Stage 2: Blueprint (15 min)"]
-    S2 --> S3["Stage 3: Build & QA (90 min)"]
-```
+| Clock | Stage | Owner | Output |
+| :--- | --- | :--- | :--- |
+| 0:00–0:10 | **Grill** — the 7 questions in the sprint skill | human answers, agent asks | answered ideas, no assumptions |
+| 0:10–0:20 | **sprint.md** — 3 approaches, pick 1, invariants, file manifest, cut list | orchestrator | `artifacts/SPRINT-1/sprint.md` |
+| 0:20–0:25 | **Contract freeze** — endpoints + fields written into `contracts/api.md` | orchestrator | frozen contract |
+| 0:25–1:35 | **Build** — two agents in parallel, one lane each | frontend + backend | code |
+| 1:35–1:55 | **verify.md** — boot, click golden path, 5 edge + 5 failure, contract audit | each agent owns its lane | verdict table |
+| 1:55–2:00 | **Demo script** — 90-second narrative, one rehearsal | human | rehearsed flow |
 
-### Stage 0: 3-Minute Scope Definition (Cold-Start)
-Before proposing architectures, extract the **Core MVP Demo Loop**:
-1. **User Archetype & Pain:** Who is this for? What single acute problem is solved?
-2. **The 3-Step "Aha!" Loop:**  
-   - **Input:** What does the user upload, type, or click?
-   - **Processing:** What does the backend / AI reasoning engine compute?
-   - **Output:** What striking visual result is rendered on screen for the judges?
-3. **The Non-Negotiable Cut:** Explicitly identify what we **deliberately cut** to ship in 3 hours (no billing, no multi-tenant orgs, no complex settings).
+Default cut list unless the idea demands otherwise: billing, teams/orgs, settings pages,
+email, admin, mobile layout polish, tests beyond the verify gates.
 
-### Stage 1: Narrsistic Pluto (`skills/core/narrsistic-pluto/SKILL.md`)
-- The agent outputs `architecture-analysis.md`.
-- Formulates **6 distinct, creative engineering approaches** dynamically tailored to the specific problem.
-- Evaluates complexity, trade-offs, blast radius, and rejection rationale.
-- The **Human Director selects the winning approach**.
+## 5. Before the event starts (tonight)
 
-### Stage 2: Converged Task Blueprint (`skills/core/converged-task-blueprint/SKILL.md`)
-- The agent authors `task_blueprint.md` (200+ lines):
-  1. *Understanding & Mental Model*: Physical analogy, zero-magic trace.
-  2. *CS Invariants & Data Structures*: Big-O performance, memory backpressure.
-  3. *10-Point Architectural Grill*: Concurrency, partial failures, security, latency boundaries.
-  4. *Exact File Manifest*: Line-level file targets, Pydantic & TypeScript contracts.
-  5. *Rollback Runbook*: 60-second revert strategy.
+1. **Apply the RLS migration.** Supabase dashboard → SQL Editor → paste
+   `Shannons_diary/database/migrations/002_per_user_isolation.sql` → Run. Until this is in,
+   any visitor can update or delete any row.
+2. **Seed the demo account.** From `Shannons_diary/backend` with its venv active:
+   `python ../database/seed_demo_user.py` → copy the two printed lines into
+   `Shannons_diary/frontend/.env`. Judge Demo signs in for real; it used to fake a user
+   object in React state.
+3. **Decide on Gemini.** Put a key in `backend/.env` as `GEMINI_API_KEY`, or accept that
+   the copilot panel shows a 503. Do not leave a mock reply in its place.
+4. **Walk Google OAuth once** in the browser. Confirm `http://localhost:5173` is in
+   Supabase → Authentication → URL Configuration → Redirect URLs.
+5. **Add a git remote and push.** There is no backup of this work right now.
+6. Boot both stacks and leave the terminals running (next section) so tomorrow is a
+   refresh, not a first start.
 
-### Stage 3: Implementation & Active Verification (`skills/core/testing-verification/SKILL.md`)
-- **Coding Agents Build**: Implement UI and backend endpoints.
-- **Active QA Verification**: The agent generates and executes `verification.md`:
-  - Unit tests
-  - **10 Edge Cases** tested
-  - **10 Failure Cases** tested
-  - End-to-end integration flow verified
-  - Contract audit between FastAPI schemas and React TypeScript interfaces
-  - Self-healing flaw resolution before declaring complete.
+## 6. Daily commands
 
----
-
-## 4. UI Taste & Frontend Rules (Strict Anti-Slop Policy)
-
-When implementing the frontend, every agent **MUST** follow [`Heisenberg OS/UItasteskills/design-taste-frontend/SKILL.md`](file:///c:/Users/Abdul%20Jabbar%20Metlo/Desktop/Hackathon/Heisenberg%20OS/UItasteskills/design-taste-frontend/SKILL.md):
-
-1. **Anti-Default Discipline:**
-   - ❌ NO generic AI-purple gradients on dark mesh cards.
-   - ❌ NO 3 equal cards with identical icons.
-   - ❌ NO infinite micro-animations spinning aimlessly.
-   - ✅ Clean typography pairing: Plus Jakarta Sans for UI + JetBrains Mono for metrics/code.
-   - ✅ High-contrast border borders (`border-neutral-800`), crisp contrast, tactile hover states (`active:scale-[0.98]`).
-2. **Three Dials Baseline:**
-   - `DESIGN_VARIANCE: 8` (High visual distinction)
-   - `MOTION_INTENSITY: 5` (Subtle, functional transitions)
-   - `VISUAL_DENSITY: 4` (Clean, balanced layout; not too cramped, not too sparse)
-3. **Accessibility & Touch Ergonomics:**
-   - Touch targets $\ge 44 \times 44\text{px}$.
-   - Text contrast meets WCAG AA standards against dark backgrounds.
-
----
-
-## 5. Multi-Agent Team Collaboration Matrix
-
-| Role | Assigned To | Primary Responsibilities |
-| :--- | :--- | :--- |
-| **Product Director & Judge** | **User (Human)** | Defines theme, approves winning Pluto approach, performs live user acceptance testing. |
-| **System Architect & QA** | **Antigravity (Gemini)** | Executes Pluto analysis, authors Converged Blueprint, builds backend routers, runs 20-point verification suite. |
-| **Frontend Specialist** | **Alibaba Qoder (GLM / Kimi)** | Crafts React UI, adheres to `UItasteskills`, handles animations, responsive layouts, and visual hierarchy. |
-
----
-
-## 6. Daily Operations Cheat Sheet
-
-### Start Backend Server:
 ```powershell
-cd "c:\Users\Abdul Jabbar Metlo\Desktop\Hackathon\Shannons_diary\backend"
+# backend
+cd "C:\Users\Abdul Jabbar Metlo\Desktop\Hackathon\Shannons_diary\backend"
 .venv\Scripts\activate
 uvicorn app.main:app --reload --port 8000
-```
-- Swagger Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-- Health Check: [http://localhost:8000/health](http://localhost:8000/health)
 
-### Start Frontend Server:
-```powershell
-cd "c:\Users\Abdul Jabbar Metlo\Desktop\Hackathon\Shannons_diary\frontend"
-.\node_modules\.bin\vite.cmd --port 5173
-```
-- Web Application: [http://localhost:5173](http://localhost:5173)
+# frontend
+cd "C:\Users\Abdul Jabbar Metlo\Desktop\Hackathon\Shannons_diary\frontend"
+npm run dev
 
-### Verify Build Before Demo:
-```powershell
-cd "c:\Users\Abdul Jabbar Metlo\Desktop\Hackathon\Shannons_diary\frontend"
-.\node_modules\.bin\vite.cmd build
+# real build (vite build alone skips typechecking)
+npm run build
+
+# policy check, advisory only, never blocks work
+cd "C:\Users\Abdul Jabbar Metlo\Desktop\Hackathon"
+python scripts/heisenberg_guard.py validate --workspace .
 ```
 
----
+Docs: `http://localhost:8000/docs` · Health: `http://localhost:8000/health`
 
-## 7. Golden Rules for Agents
+## 7. Working rules for agents
 
-1. **Do Not Overwrite `.env`**: Credentials are live and valid. Never replace them with placeholders.
-2. **Do Not Block Edits**: Heisenberg guard policy is set to `"mode": "advisory"`. Do not refuse file edits due to missing non-critical receipts.
-3. **Keep the "Judge Demo" Button**: On demo day, judges need 1-click access. Never remove the demo bypass button from the header.
-4. **Speed Over Bureaucracy**: Maintain thoroughness in the blueprint and tests, but do not waste time creating redundant markdown documents outside the 3 core artifacts (`architecture-analysis.md`, `task_blueprint.md`, `verification.md`).
+- Stay in your lane (`contracts/api.md` §Lanes). Need the other side changed → REQUESTS,
+  not an edit to their file.
+- One branch (`main`), no PRs, commit named paths. Never `git add -A`, never `git stash`.
+- Failures surface in the UI. No `catch` returning `[]`, no locally fabricated rows, no
+  `if (list.length > 0)` that hides a genuinely empty backend.
+- Report as VERIFIED / INFERRED / UNKNOWN. "Live and tested" requires having run it.

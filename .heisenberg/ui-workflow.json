@@ -1,0 +1,29 @@
+{
+  "version": "lite-1.0.0",
+  "purpose": "One fast UI path. Tailwind + Lucide, functional first, no style-skill ceremony.",
+  "surface_routes": {
+    "web-product-ui": {
+      "required_before_edit": [],
+      "required_before_complete": ["verify.md"],
+      "style_selection": ["none", "heisenberg-lite-default"],
+      "platforms": ["web"]
+    },
+    "web-marketing-ui": {
+      "required_before_edit": [],
+      "required_before_complete": ["verify.md"],
+      "style_selection": ["none", "heisenberg-lite-default"],
+      "platforms": ["web"]
+    },
+    "native-mobile-ui": {
+      "required_before_edit": [],
+      "required_before_complete": ["verify.md"],
+      "style_selection": ["none", "heisenberg-lite-default"],
+      "platforms": ["react-native", "expo", "flutter"]
+    }
+  },
+  "rules": {
+    "style_selection": "Tailwind CSS + Lucide React. Reuse the existing dark neutral/cyan system in Shannons_diary/frontend/src/index.css.",
+    "product_ui": "Every interactive surface has 4 states: idle, loading, error, empty. Error and empty are never faked as success.",
+    "accessibility": "Touch targets >= 44px, WCAG AA contrast, visible focus rings."
+  }
+}

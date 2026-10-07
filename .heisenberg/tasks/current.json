@@ -1,0 +1,33 @@
+{
+  "task_id": "SPRINT-0",
+  "task_type": "sprint",
+  "status": "planned",
+  "title": "Pre-hackathon setup (idea not yet announced)",
+  "selected_skills": ["sprint", "verify"],
+  "required_before_edit": [],
+  "required_artifacts": ["sprint.md", "verify.md"],
+  "files_in_scope": [
+    "AGENTS.md",
+    ".heisenberg/**",
+    "scripts/heisenberg_guard.py",
+    "contracts/api.md",
+    "AGENT_RUNBOOK.md"
+  ],
+  "requires_graperoot": false,
+  "ui_surface": null,
+  "lanes": {
+    "orchestrator": {
+      "owns": ["contracts/api.md", ".heisenberg/tasks/current.json", "AGENT_RUNBOOK.md"],
+      "note": "The human and the planning agent. Owns the contract and the ownership map."
+    },
+    "frontend": {
+      "owns": ["Shannons_diary/frontend/src/**", "Shannons_diary/frontend/index.html"],
+      "never_touch": ["Shannons_diary/backend/**", "Shannons_diary/database/**"]
+    },
+    "backend": {
+      "owns": ["Shannons_diary/backend/app/**", "Shannons_diary/database/**"],
+      "never_touch": ["Shannons_diary/frontend/src/**"]
+    }
+  },
+  "notes": "At idea reveal: create .heisenberg/artifacts/SPRINT-1/sprint.md via the sprint skill, set status to implementing, and replace files_in_scope with the real manifest."
+}

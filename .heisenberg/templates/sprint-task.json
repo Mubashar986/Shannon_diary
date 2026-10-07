@@ -1,0 +1,48 @@
+{
+  "task_id": "SPRINT-1",
+  "task_type": "sprint",
+  "status": "implementing",
+  "title": "<one-line idea>",
+  "selected_skills": [
+    "sprint",
+    "verify"
+  ],
+  "required_before_edit": [],
+  "required_artifacts": [
+    "sprint.md",
+    "verify.md"
+  ],
+  "files_in_scope": [],
+  "requires_graperoot": false,
+  "ui_surface": null,
+  "lanes": {
+    "orchestrator": {
+      "owns": [
+        "contracts/api.md",
+        ".heisenberg/tasks/current.json",
+        "AGENT_RUNBOOK.md"
+      ],
+      "note": "The human and the planning agent. Owns the contract and the ownership map."
+    },
+    "frontend": {
+      "owns": [
+        "Shannons_diary/frontend/src/**",
+        "Shannons_diary/frontend/index.html"
+      ],
+      "never_touch": [
+        "Shannons_diary/backend/**",
+        "Shannons_diary/database/**"
+      ]
+    },
+    "backend": {
+      "owns": [
+        "Shannons_diary/backend/app/**",
+        "Shannons_diary/database/**"
+      ],
+      "never_touch": [
+        "Shannons_diary/frontend/src/**"
+      ]
+    }
+  },
+  "notes": "Copy to .heisenberg/tasks/SPRINT-1.json at idea reveal. Fill files_in_scope from sprint.md Pass 4."
+}
