@@ -9,7 +9,7 @@ The Infinity Hack '26 · AI Project Manager Challenge: Meeting to Execution
   - Backend Engineer: FastAPI endpoints, SQLite WAL database, AI extraction pipeline
   - Frontend Developer: React, TypeScript, Tailwind CRM UI, quick demo switcher
   - QA & AI Engineer: Transcript parsing validation, organizer test cases, edge cases
-- Repository: [https://github.com/your-username/novaworks-crm](https://github.com/your-username/novaworks-crm)
+- Repository: [https://github.com/Mubashar986/Shannon_diary](https://github.com/Mubashar986/Shannon_diary)
 
 ## What Works
 - **Seeded Login & Quick Switcher**: Instant 1-click login as Admin, any of the 3 Project Managers, or any of the 6 Developer Agents with password `Demo123!`.
@@ -144,7 +144,7 @@ Open browser at: `http://localhost:5173`
 - Accounts are seeded for demo speed; user registration and password recovery flows are intentionally bypassed as per challenge guidelines.
 
 ## Submission Summary
-- **Source repository**: [https://github.com/your-username/novaworks-crm](https://github.com/your-username/novaworks-crm)
+- **Source repository**: [https://github.com/Mubashar986/Shannon_diary](https://github.com/Mubashar986/Shannon_diary)
 - **Status**: Complete MVP meeting-to-execution CRM ready for judging.
 - **Seeded accounts**: 10 accounts verified working.
 - **AI Transcript Automation**: Tested and verified.
